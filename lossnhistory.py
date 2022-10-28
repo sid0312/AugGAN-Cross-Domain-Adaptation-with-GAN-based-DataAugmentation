@@ -62,7 +62,7 @@ class Segmentation_Loss():
 		return pixelwise_loss, loss_term
 
 	def pixelwise_loss(self, pred, target):
-		log_pred = F.log_softmax(pred)
+		log_pred = F.log_softmax(pred, dim=1)
 		xent_loss = self.crossentropy(log_pred, target)
 
 		if not self.l1_portion:
@@ -100,8 +100,8 @@ class EpochHistory():
         self.losses_g_y[self.count] = loss_dict.get('loss_g_y')
         self.losses_cyc_x[self.count] = loss_dict.get('loss_cyc_x')
         self.losses_cyc_y[self.count] = loss_dict.get('loss_cyc_y')
-        self.losses_seg_x[self.count] = loss_dict.get('loss_seg_x')
-        self.losses_seg_y[self.count] = loss_dict.get('loss_seg_y')
+        # self.losses_seg_x[self.count] = loss_dict.get('loss_seg_x')
+        # self.losses_seg_y[self.count] = loss_dict.get('loss_seg_y')
         self.losses_d_x[self.count] = loss_dict.get('loss_d_x')
         self.losses_d_y[self.count] = loss_dict.get('loss_d_y')
         
@@ -116,12 +116,12 @@ class EpochHistory():
 			prefix + 'loss_g_y': self.losses_g_y.mean(),
 			prefix + 'loss_cyc_x': self.losses_cyc_x.mean(),
 			prefix + 'loss_cyc_y': self.losses_cyc_y.mean(),
-            prefix + 'loss_seg_x': self.losses_seg_x.mean(),
-            prefix + 'loss_seg_y': self.losses_seg_y.mean(),
+            # prefix + 'loss_seg_x': self.losses_seg_x.mean(),
+            # prefix + 'loss_seg_y': self.losses_seg_y.mean(),
 		    prefix + 'loss_d_x': self.losses_d_x.mean(),
-		    prefix + 'loss_d_y': self.losses_d_y.mean(),
-            prefix + 'loss_ws_x': self.losses_ws_x.mean(),
-            prefix + 'loss_ws_y': self.losses_ws_y.mean()
+		    prefix + 'loss_d_y': self.losses_d_y.mean()
+            # prefix + 'loss_ws_x': self.losses_ws_x.mean(),
+            # prefix + 'loss_ws_y': self.losses_ws_y.mean()
 		}	
         terms.update({
 			prefix + k:v.mean() for k,v in self.loss_term.items()
