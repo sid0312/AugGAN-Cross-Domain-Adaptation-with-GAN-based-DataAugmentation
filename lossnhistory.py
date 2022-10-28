@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch.nn import init
 import torch.nn.functional as F
+import sys
 
 # Defines the GAN loss which uses either LSGAN or the regular GAN.
 # When LSGAN is used, it is basically same as MSELoss,
@@ -51,34 +52,32 @@ class GANLoss(nn.Module):
 # Define Segmentation Loss for multitask learning
 class Segmentation_Loss():
     
-	def __init__(self, l1_portion=0.0, weights=None):
-		self.l1_criterion = nn.L1Loss().cuda()
-		self.crossentropy = nn.CrossEntropyLoss(weight=weights).cuda()
-		self.l1_portion = l1_portion
+        def __init__(self, l1_portion=0.0, weights=None):
+                self.l1_criterion = nn.L1Loss().cuda()
+                self.crossentropy = nn.CrossEntropyLoss(weight=weights).cuda()
+                self.l1_portion = l1_portion
 
-	def __call__(self, pred, target) -> (float,dict):
-		pixelwise_loss, loss_term = self.pixelwise_loss(pred, target)
+        def __call__(self, pred, target) -> (float, dict):
+                pixelwise_loss, loss_term = self.pixelwise_loss(pred, target)
 
-		return pixelwise_loss, loss_term
+                return pixelwise_loss, loss_term
 
-	def pixelwise_loss(self, pred, target):
-		log_pred = F.log_softmax(pred)
-		xent_loss = self.crossentropy(log_pred, target)
+        def pixelwise_loss(self, pred, target):
+                log_pred = F.log_softmax(pred, dim=1)
+                xent_loss = self.crossentropy(log_pred, target)
+                if not self.l1_portion:
+                        return xent_loss, {'xent': xent_loss}
 
-		if not self.l1_portion:
-			return xent_loss, {'xent': xent_loss}
+                onehot_target = (
+                        torch.FloatTensor(pred.size())
+                        .zero_().cuda()
+                        .scatter_(1, target.data.unsqueeze(1),1))
 
-		onehot_target = (
-			torch.FloatTensor(pred.size())
-			.zero_().cuda()
-			.scatter_(1, target.data.unsqueeze(1),1))
+                l1_loss = self.l1_criterion(pred, Variable(onehot_target))
+                return xent_loss + self.l1_portion*l1_loss, {'xent':xent_loss, 'l1':l1_loss}
 
-		l1_loss = self.l1_criterion(pred, Variable(onehot_target))
-
-		return xent_loss + self.l1_portion*l1_loss, {'xent':xent_loss, 'l1':l1_loss}
-
-	def set_summary_loagger(self, tf_summary):
-		self.tf_summary = tf_summary
+        def set_summary_loagger(self, tf_summary):
+                self.tf_summary = tf_summary
 
 class EpochHistory():
     def __init__(self, length):

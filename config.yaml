@@ -1,9 +1,9 @@
 train: 
-  save_path: '../AugGAN_vCVPR/output/{}/epoch_{}'
-  root_dir: '../../../shared/SYNTHIA/'
+  save_path: '../output/{}/epoch_{}'
+  root_dir: '../../input/synthia/SYNTHIA/'
   epochs: 200
   dset_mode: 'synthia'
-  discription: 'testing_107June5'
+  description: 'baseline_run'
   hyperparameters:
     network:
       net:
@@ -21,7 +21,7 @@ train:
         lambda_ws_shared: 0.2
         lambda_ws_decoder: 0.2
         batch_size: 1
-        name: 'test_4.30'
+        name: 'baseline'
 # Encoder Configuration
       enc_x:
         input_nc: 3
@@ -65,9 +65,9 @@ train:
         use_sigmoid: False 
 # Dataset Configuration
     dataset:
-      seqs: ['04']
+      seqs: ['02']
       phase: 'train'
-      root_dir: '../../../shared/SYNTHIA/'
+      root_dir: '../../input/synthia/SYNTHIA/'
       style_A: 'SYNTHIA-SEQS-{}-SPRING'
       style_B: 'SYNTHIA-SEQS-{}-NIGHT'    
       load_size: 286
