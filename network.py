@@ -9,11 +9,11 @@ import utils.util as util
 from utils.image_pool import ImagePool
 
 class network():
-    def __init__(self, params):
+    def __init__(self, params, mode=1):
         super(network, self).__init__()
         self.Tensor = torch.cuda.FloatTensor
         self.configurate(params['net'])
-
+        self.mode = mode
         self.fake_pool_x = ImagePool(self.pool_size)
         self.fake_pool_y = ImagePool(self.pool_size)
         self.input_x = self.Tensor(self.batch_size, 3, 256, 256)
@@ -62,8 +62,12 @@ class network():
         self.z_y = self.enc_y(self.real_y)    
 
     def Generate(self):
-        self.fake_y = self.mul_gen_x(self.z_x)
-        self.fake_x = self.mul_gen_y(self.z_y)
+        if self.mode == 1 or self.mode == 3:
+            self.fake_y = self.mul_gen_x(self.z_x, condition=True)
+            self.fake_x = self.mul_gen_y(self.z_y, condition=True)
+        else:
+            self.fake_y = self.mul_gen_x(self.z_x, condition=False)
+            self.fake_x = self.mul_gen_y(self.z_y, condition=False)
     
     def optimize_params(self):
         #Optimize Encoder_Parsing Pair
@@ -109,28 +113,32 @@ class network():
         # self.loss_seg_y, _ = self.criterionSeg(self.parse_y, self.target_y)
         # self.loss_seg_y *= self.lambda_seg_y
 
-        self.rec_x = self.mul_gen_y(self.enc_y(self.fake_y))
+        if self.mode == 2 or self.mode == 3:
+            self.rec_x = self.mul_gen_y(self.enc_y(self.fake_y), condition=True)
+            self.rec_y = self.mul_gen_x(self.enc_x(self.fake_x), condition=True)
+        else:
+            self.rec_x = self.mul_gen_y(self.enc_y(self.fake_y), condition=False)
+            self.rec_y = self.mul_gen_x(self.enc_x(self.fake_x), condition=False)
+
         self.loss_cycle_x = self.criterionCyC(self.rec_x, self.real_x) * self.lambda_A   
-        
-        self.rec_y = self.mul_gen_x(self.enc_x(self.fake_x))
         self.loss_cycle_y = self.criterionCyC(self.rec_y, self.real_y) * self.lambda_B
 
         #L2 Regularization
-        l2_reg_x = 0
-        for param_s, param_p in zip(self.mul_gen_x.shared_x.parameters(), self.mul_gen_x.shared_y.parameters()):
-            diff = param_s - param_p
-            l2_reg_x += (diff.norm(2))*self.lambda_ws_shared
-        for param_s, param_p in zip(self.mul_gen_x.decoder_x.c_layers.parameters(), self.mul_gen_x.decoder_y.c_layers.parameters()):
-            diff = param_s - param_p
-            l2_reg_x += (diff.norm(2))*self.lambda_ws_decoder
+        # l2_reg_x = 0
+        # for param_s, param_p in zip(self.mul_gen_x.shared_x.parameters(), self.mul_gen_x.shared_y.parameters()):
+        #     diff = param_s - param_p
+        #     l2_reg_x += (diff.norm(2))*self.lambda_ws_shared
+        # for param_s, param_p in zip(self.mul_gen_x.decoder_x.c_layers.parameters(), self.mul_gen_x.decoder_y.c_layers.parameters()):
+        #     diff = param_s - param_p
+        #     l2_reg_x += (diff.norm(2))*self.lambda_ws_decoder
         # self.loss_ws_x = l2_reg_x
-        l2_reg_y = 0
-        for param_s, param_p in zip(self.mul_gen_y.shared_x.parameters(), self.mul_gen_y.shared_y.parameters()):
-            diff = param_s - param_p
-            l2_reg_y += (diff.norm(2))*self.lambda_ws_shared
-        for param_s, param_p in zip(self.mul_gen_y.decoder_x.c_layers.parameters(), self.mul_gen_y.decoder_y.c_layers.parameters()):
-            diff = param_s - param_p
-            l2_reg_x += (diff.norm(2))*self.lambda_ws_decoder
+        # l2_reg_y = 0
+        # for param_s, param_p in zip(self.mul_gen_y.shared_x.parameters(), self.mul_gen_y.shared_y.parameters()):
+        #     diff = param_s - param_p
+        #     l2_reg_y += (diff.norm(2))*self.lambda_ws_shared
+        # for param_s, param_p in zip(self.mul_gen_y.decoder_x.c_layers.parameters(), self.mul_gen_y.decoder_y.c_layers.parameters()):
+        #     diff = param_s - param_p
+        #     l2_reg_x += (diff.norm(2))*self.lambda_ws_decoder
         # self.loss_ws_y = l2_reg_y
 
         # loss_G = self.loss_G_x + self.loss_G_y + self.loss_cycle_x + self.loss_cycle_y + self.loss_seg_x + self.loss_seg_y + self.loss_ws_x + self.loss_ws_y

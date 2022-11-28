@@ -52,19 +52,22 @@ class Multitask_Generator(nn.Module):
         self.shared_y = SharedBlock(input_nc, norm_layer, use_bias, use_dropout, n_blocks, padding_type)
         self.decoder_x = Decoder(input_nc, output_nc, norm_layer, use_bias)
         self.decoder_y = Decoder(input_nc, parse_nc, norm_layer, use_bias)
-        self.fc = nn.Linear(48,3)
-    def forward(self, x):
-        batch_size = x.shape[0]
-        x_copy = x.clone()
-        a = self.decoder_x(self.shared_x(x))
-        x_copy = x_copy.permute(0,2,3,1)
-        x_copy = x_copy.view(batch_size,16,152,256)
-        multilinear_map = torch.einsum('abcd,aecd->abecd',a, x_copy)
-        multilinear_map = multilinear_map.view(batch_size,48,152,256)
-        multilinear_map = multilinear_map.permute(0,2,3,1)
-        g_x = self.fc(multilinear_map)
-        g_x = g_x.permute(0,3,1,2)
-        return g_x
+        self.fc = nn.Linear(48, 3)
+    def forward(self, x, condition:bool=False):
+        if condition:
+            batch_size = x.shape[0]
+            a = self.decoder_x(self.shared_x(x))
+            x_copy = x.clone()
+            x_copy = x_copy.permute(0,2,3,1)
+            x_copy = x_copy.view(batch_size,16,152,256)
+            multilinear_map = torch.einsum('abcd,aecd->abecd',a, x_copy)
+            multilinear_map = multilinear_map.view(batch_size,48,152,256)
+            multilinear_map = multilinear_map.permute(0,2,3,1)
+            g_x = self.fc(multilinear_map)
+            g_x = g_x.permute(0,3,1,2)
+            return g_x
+        else:
+            return self.decoder_x(self.shared_x(x))
 
 class SharedBlock(nn.Module):
     def __init__(self, dim, norm_layer=nn.BatchNorm2d, use_bias=False, use_dropout=False, n_blocks=6, padding_type='reflect'):
